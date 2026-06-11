@@ -1,0 +1,17 @@
+build/
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.aps
+*.ncb
+*.opendb
+*.db
+*.VC.db
+*.VC.opendb
+ipch/
+x64/
+x86/
+Debug/
+Release/

@@ -1,0 +1,27 @@
+[
+  {
+    "directory": "C:/Users/trach/Desktop/software_projects/Switchr/Switchr",
+    "file": "src/main.cpp",
+    "arguments": ["clang-cl", "/std:c++17", "/permissive-", "/EHsc", "/utf-8", "/DWIN32", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DNOMINMAX", "/DWIN32_LEAN_AND_MEAN", "/D_DEBUG", "/D_WIN32_WINNT=0x0A00", "/c", "src/main.cpp"]
+  },
+  {
+    "directory": "C:/Users/trach/Desktop/software_projects/Switchr/Switchr",
+    "file": "src/MruTracker.cpp",
+    "arguments": ["clang-cl", "/std:c++17", "/permissive-", "/EHsc", "/utf-8", "/DWIN32", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DNOMINMAX", "/DWIN32_LEAN_AND_MEAN", "/D_DEBUG", "/D_WIN32_WINNT=0x0A00", "/c", "src/MruTracker.cpp"]
+  },
+  {
+    "directory": "C:/Users/trach/Desktop/software_projects/Switchr/Switchr",
+    "file": "src/Overlay.cpp",
+    "arguments": ["clang-cl", "/std:c++17", "/permissive-", "/EHsc", "/utf-8", "/DWIN32", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DNOMINMAX", "/DWIN32_LEAN_AND_MEAN", "/D_DEBUG", "/D_WIN32_WINNT=0x0A00", "/c", "src/Overlay.cpp"]
+  },
+  {
+    "directory": "C:/Users/trach/Desktop/software_projects/Switchr/Switchr",
+    "file": "src/Renderer.cpp",
+    "arguments": ["clang-cl", "/std:c++17", "/permissive-", "/EHsc", "/utf-8", "/DWIN32", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DNOMINMAX", "/DWIN32_LEAN_AND_MEAN", "/D_DEBUG", "/D_WIN32_WINNT=0x0A00", "/c", "src/Renderer.cpp"]
+  },
+  {
+    "directory": "C:/Users/trach/Desktop/software_projects/Switchr/Switchr",
+    "file": "src/WindowList.cpp",
+    "arguments": ["clang-cl", "/std:c++17", "/permissive-", "/EHsc", "/utf-8", "/DWIN32", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DNOMINMAX", "/DWIN32_LEAN_AND_MEAN", "/D_DEBUG", "/D_WIN32_WINNT=0x0A00", "/c", "src/WindowList.cpp"]
+  }
+]

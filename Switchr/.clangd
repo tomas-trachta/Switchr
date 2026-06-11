@@ -1,0 +1,11 @@
+# clangd config for the Switchr MSVC/Win32 project.
+# Flags come from compile_commands.json; this just tunes behavior.
+CompileFlags:
+  Compiler: clang-cl        # parse in MSVC (cl.exe) mode
+Index:
+  Background: Build         # index the whole project for fast go-to-def / find-refs
+Diagnostics:
+  UnusedIncludes: None      # avoid noisy "unused include" warnings on Win32 headers
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
