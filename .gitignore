@@ -15,3 +15,5 @@ x64/
 x86/
 Debug/
 Release/
+*.sublime-*
+compile_commands.json
