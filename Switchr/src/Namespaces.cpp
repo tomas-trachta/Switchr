@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cwctype>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #pragma comment(lib, "dwmapi.lib")
@@ -98,16 +99,27 @@ void RestoreTaskbarAnimations() {
     g_animSuppressed = false;
 }
 
-// One DeferWindowPos transaction with DWM transitions suppressed — otherwise
-// every window fades individually and the taskbar reshuffles once per window.
-void ApplyVisibility(const std::vector<HWND>& show, const std::vector<HWND>& hide) {
-    BOOL on = TRUE, off = FALSE;
-    auto setNoTransitions = [](HWND h, BOOL* v) {
-        DwmSetWindowAttribute(h, DWMWA_TRANSITIONS_FORCEDISABLED, v, sizeof(*v));
-    };
+std::unordered_set<HWND> g_noTrans;
 
-    for (HWND h : show) setNoTransitions(h, &on);
-    for (HWND h : hide) setNoTransitions(h, &on);
+void SuppressTransitions(HWND h) {
+    if (!g_noTrans.insert(h).second) return;
+
+    BOOL on = TRUE;
+    DwmSetWindowAttribute(h, DWMWA_TRANSITIONS_FORCEDISABLED, &on, sizeof(on));
+}
+
+void RestoreTransitions() {
+    BOOL off = FALSE;
+    for (HWND h : g_noTrans) {
+        if (IsWindow(h))
+            DwmSetWindowAttribute(h, DWMWA_TRANSITIONS_FORCEDISABLED, &off, sizeof(off));
+    }
+    g_noTrans.clear();
+}
+
+void ApplyVisibility(const std::vector<HWND>& show, const std::vector<HWND>& hide) {
+    for (HWND h : show) SuppressTransitions(h);
+    for (HWND h : hide) SuppressTransitions(h);
 
     constexpr UINT kCommon = SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
                              SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_ASYNCWINDOWPOS;
@@ -121,9 +133,6 @@ void ApplyVisibility(const std::vector<HWND>& show, const std::vector<HWND>& hid
         for (HWND h : show) ShowWindowAsync(h, SW_SHOWNA);
         for (HWND h : hide) ShowWindowAsync(h, SW_HIDE);
     }
-
-    for (HWND h : show) setNoTransitions(h, &off);
-    for (HWND h : hide) setNoTransitions(h, &off);
 }
 
 void ReapplyVisibility() {
@@ -393,6 +402,7 @@ void CALLBACK DestroyHookProc(HWINEVENTHOOK, DWORD, HWND hwnd,
     // Erase eagerly — HWNDs are recycled, and a stale entry would dump a
     // future unrelated window into an old namespace.
     g_assign.erase(hwnd);
+    g_noTrans.erase(hwnd);
 }
 
 void SweepUntrackedWindows() {
@@ -419,6 +429,7 @@ void Ns::Init(HWND hotkeyOwner) {
 
 void Ns::Shutdown() {
     ShowAllManaged();
+    RestoreTransitions();
     RestoreTaskbarAnimations();
     UnregisterCycleHotkeys();
 
@@ -459,6 +470,7 @@ void Ns::Disable() {
     g_enabled = false;
     UnregisterCycleHotkeys();
     ShowAllManaged();
+    RestoreTransitions();
     RestoreTaskbarAnimations();
 }
 
@@ -531,9 +543,10 @@ bool Ns::CycleActive(int dir) {
     // going to the window that was just hidden.
     HWND best = nullptr;
     uint64_t bestRank = 0;
-    for (const auto& w : EnumerateAltTabWindows(nullptr)) {
-        uint64_t r = Mru::Rank(w.hwnd);
-        if (!best || r > bestRank) { best = w.hwnd; bestRank = r; }
+    for (const auto& [hwnd, ns] : g_assign) {
+        if (ns != g_active || !IsWindow(hwnd)) continue;
+        uint64_t r = Mru::Rank(hwnd);
+        if (!best || r > bestRank) { best = hwnd; bestRank = r; }
     }
     if (best) ForceForeground(best);
 

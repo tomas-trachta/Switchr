@@ -6,6 +6,10 @@
 // windows stay visible (and on the taskbar); the rest are hidden until their
 // namespace becomes active again. While enabled, a WinEvent hook auto-assigns
 // every newly shown top-level window to the active namespace.
+// Switching is built to be instant: managed windows have their DWM open/close
+// transitions force-disabled (and the taskbar slide animation suppressed) for as
+// long as the mode is enabled, so a switch is an animation-free show/hide flip.
+// Both are restored on Disable()/Shutdown().
 // Single-threaded: all calls must come from the thread that called Init().
 namespace Ns {
 

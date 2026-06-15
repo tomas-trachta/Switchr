@@ -17,8 +17,8 @@ constexpr float kOsdCorner   = 18.f;
 constexpr float kOsdMargin   = 16.f;
 constexpr UINT  kHoldTimerId = 1;
 constexpr UINT  kFadeTimerId = 2;
-constexpr UINT  kHoldMs      = 750;
-constexpr UINT  kFadeMs      = 180;
+constexpr UINT  kHoldMs      = 500;
+constexpr UINT  kFadeMs      = 100;
 
 D2D1_COLOR_F Premul(float r, float g, float b, float a) {
     return D2D1::ColorF(r * a, g * a, b * a, a);
