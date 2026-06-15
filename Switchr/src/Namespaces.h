@@ -9,8 +9,8 @@
 // Single-threaded: all calls must come from the thread that called Init().
 namespace Ns {
 
-// WM_HOTKEY ids (Ctrl+Left/Right) delivered to the Init() owner window while
-// the mode is enabled.
+// WM_HOTKEY ids (Ctrl+Alt+Left/Right) delivered to the Init() owner window
+// while the mode is enabled.
 constexpr UINT kHotkeyPrev = 0x4F8B;
 constexpr UINT kHotkeyNext = 0x4F8C;
 
@@ -21,7 +21,7 @@ bool Enabled();
 void Enable();     // first call of a session restores the saved structure
 void Disable();    // un-hides every managed window; assignments survive
 
-// The overlay suspends the global Ctrl+arrow hotkeys while it is visible so
+// The overlay suspends the global Ctrl+Alt+arrow hotkeys while it is visible so
 // its own key handling sees the arrows.
 void SuspendHotkeys();
 void ResumeHotkeys();

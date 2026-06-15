@@ -36,7 +36,7 @@ driven by window messages. Read the files in this order to get the shape:
 | Renderer | `src/Renderer.cpp/h` | The D3D11 → DXGI → DirectComposition → D2D/DWrite stack behind a composition window. One per overlay-like window; sized to a single monitor, `Resize()`d before each show. Also caches shell icons as D2D bitmaps. |
 | Window list | `src/WindowList.cpp/h` | Enumerates alt-tab-eligible top-level windows (title, exe basename, exe path) and force-foregrounds a target with thread-input attachment. |
 | MRU | `src/MruTracker.cpp/h` | WinEvent hook on foreground changes; hands out a monotonic rank per HWND. Seeds from the z-order at startup. |
-| Namespaces | `src/Namespaces.cpp/h` | Workspaces. Tracks HWND→namespace assignments, hides/shows windows on switch, registers the global `Ctrl+←/→` hotkeys, auto-assigns new windows via an `EVENT_OBJECT_SHOW` hook, persists structure to `%APPDATA%\Switchr\namespaces.txt`. |
+| Namespaces | `src/Namespaces.cpp/h` | Workspaces. Tracks HWND→namespace assignments, hides/shows windows on switch, registers the global `Ctrl+Alt+←/→` hotkeys, auto-assigns new windows via an `EVENT_OBJECT_SHOW` hook, persists structure to `%APPDATA%\Switchr\namespaces.txt`. |
 | OSD | `src/NsOsd.cpp/h` | Transient click-through toast shown on headless namespace switches. A miniature Overlay: same Renderer, hold + fade-out timer. |
 
 Cross-cutting decisions worth knowing up-front:
@@ -50,10 +50,11 @@ Cross-cutting decisions worth knowing up-front:
   switch is one atomic flip with no per-window fade. Don't add
   `ShowWindow` calls outside it.
 - **The overlay suspends the global hotkeys while visible.**
-  `Ns::SuspendHotkeys()` / `ResumeHotkeys()` — the overlay's own
-  `Ctrl+←/→` handling (word jump while editing, namespace switch
-  otherwise) needs to see the arrows. If you add a global hotkey, decide
-  what it means while the overlay is open.
+  `Ns::SuspendHotkeys()` / `ResumeHotkeys()` — the overlay's own arrow
+  handling (`Ctrl+←/→` word jump while editing, `Ctrl+Alt+←/→` namespace
+  switch otherwise) needs to see the arrows. The Alt-held switch reaches the
+  overlay as `WM_SYSKEYDOWN`. If you add a global hotkey, decide what it means
+  while the overlay is open.
 
 ### The two structural patterns
 
@@ -106,7 +107,7 @@ core loop:
   shortcuts work in the search box.
 - Scroll the grid with the wheel, `PgUp`/`PgDn`, and the scrollbar.
 - Enable namespaces mode: create (`Ctrl+N`), rename (`Ctrl+R`), move a
-  window (`Ctrl+Shift+→`), switch headlessly with `Ctrl+→` (toast
+  window (`Ctrl+Shift+→`), switch headlessly with `Ctrl+Alt+→` (toast
   appears, MRU window focused), delete (`Ctrl+D`).
 - Save, load, and load-apps round-trip via `Ctrl+S` / `Ctrl+L` /
   `Ctrl+Shift+L`.

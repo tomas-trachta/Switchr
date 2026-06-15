@@ -21,7 +21,7 @@ Alt-Tab is fine until you have thirty windows. Switchr keeps the good part
   matching and prefix bonuses.
 - **Workspaces ("namespaces").** Group windows into named workspaces;
   only the active one's windows are visible and on the taskbar. Switch
-  with plain `Ctrl+←/→` from anywhere, save the layout to disk, and
+  with `Ctrl+Alt+←/→` from anywhere, save the layout to disk, and
   relaunch a whole workspace of apps in one keystroke.
 - **Real rendering.** DirectComposition + Direct2D with live DWM
   thumbnails, server-side fade animation, and per-monitor-V2 DPI
@@ -86,17 +86,17 @@ window count, with Save / Load / Load apps buttons at the right end.
 
 | Keys | Action |
 |------|--------|
-| `Ctrl+←/→` (global, overlay closed)   | switch namespace from anywhere |
-| `Ctrl+←/→` (overlay open, grid)       | switch namespace |
-| `Ctrl+Shift+←/→`                      | move the selected window to the neighbor namespace |
-| `Ctrl+Shift+1` … `Ctrl+Shift+9`       | move the selected window to namespace 1 … 9 |
-| `Ctrl+N`                              | create a namespace (does **not** switch to it) |
-| `Ctrl+R` / double-click a pill        | rename the active / clicked namespace |
-| `Ctrl+D`                              | delete the active namespace (its windows join the next active one; the last namespace is refused) |
-| `Ctrl+M`                              | exit namespaces mode |
-| `Ctrl+S`                              | save the layout |
-| `Ctrl+L`                              | load the layout and re-assign running apps |
-| `Ctrl+Shift+L`                        | load the layout and also launch the missing apps |
+| `Ctrl+Alt+←/→` (global, overlay closed) | switch namespace from anywhere |
+| `Ctrl+Alt+←/→` (overlay open, grid)     | switch namespace |
+| `Ctrl+Shift+←/→`                        | move the selected window to the neighbor namespace |
+| `Ctrl+Shift+1` … `Ctrl+Shift+9`         | move the selected window to namespace 1 … 9 |
+| `Ctrl+N`                                | create a namespace (does **not** switch to it) |
+| `Ctrl+R` / double-click a pill          | rename the active / clicked namespace |
+| `Ctrl+D`                                | delete the active namespace (its windows join the next active one; the last namespace is refused) |
+| `Ctrl+M`                                | exit namespaces mode |
+| `Ctrl+S`                                | save the layout |
+| `Ctrl+L`                                | load the layout and re-assign running apps |
+| `Ctrl+Shift+L`                          | load the layout and also launch the missing apps |
 
 Switching headlessly (overlay closed) focuses the target namespace's
 most-recently-used window and flashes a small click-through toast

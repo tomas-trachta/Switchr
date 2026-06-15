@@ -1540,9 +1540,9 @@ static bool CaretWordJump(Overlay::State& s, int dir, bool shift) {
     return true;
 }
 
-// Ctrl+arrow: word jump while editing text, namespace switch/move otherwise.
-static bool CtrlArrow(Overlay::State& s, HWND hwnd, int dir, bool shift) {
+static bool CtrlArrow(Overlay::State& s, HWND hwnd, int dir, bool alt, bool shift) {
     if (TextEditMode(s)) return CaretWordJump(s, dir, shift);
+    if (!alt && !shift) return false;
     if (!Ns::Enabled() || Ns::Count() <= 1) return false;
 
     int target = (Ns::Active() + dir + Ns::Count()) % Ns::Count();
@@ -1592,7 +1592,7 @@ static bool HandleCtrlDigit(Overlay::State& s, HWND hwnd, int idx, bool shift) {
     return false;
 }
 
-static bool HandleCtrlKey(Overlay::State& s, HWND hwnd, WPARAM wp, bool shift) {
+static bool HandleCtrlKey(Overlay::State& s, HWND hwnd, WPARAM wp, bool alt, bool shift) {
     switch (wp) {
         case 'A': return SelectAllQuery(s);
         case 'C': return CopySelection(s, hwnd);
@@ -1619,8 +1619,8 @@ static bool HandleCtrlKey(Overlay::State& s, HWND hwnd, WPARAM wp, bool shift) {
         case '6': case '7': case '8': case '9':
             return HandleCtrlDigit(s, hwnd, (int)wp - (int)'1', shift);
 
-        case VK_LEFT:   return CtrlArrow(s, hwnd, -1, shift);
-        case VK_RIGHT:  return CtrlArrow(s, hwnd, +1, shift);
+        case VK_LEFT:   return CtrlArrow(s, hwnd, -1, alt, shift);
+        case VK_RIGHT:  return CtrlArrow(s, hwnd, +1, alt, shift);
         case VK_BACK:   return DeleteWord(s, hwnd, -1);
         case VK_DELETE: return DeleteWord(s, hwnd, +1);
         case VK_HOME:   return TextEditMode(s) && CaretToEdge(s, false, shift);
@@ -1727,20 +1727,19 @@ static bool HandlePlainKey(Overlay::State& s, HWND hwnd, WPARAM wp, bool shift) 
     return false;
 }
 
-static void OnKeyDown(Overlay& overlay, Overlay::State& s, WPARAM wp) {
+static bool OnKeyDown(Overlay& overlay, Overlay::State& s, WPARAM wp) {
     const bool ctrl  = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+    const bool alt   = (GetKeyState(VK_MENU)    & 0x8000) != 0;
     const bool shift = (GetKeyState(VK_SHIFT)   & 0x8000) != 0;
 
-    // While naming a namespace, Esc/Enter end the input instead of
-    // dismissing/activating.
     if (wp == VK_ESCAPE) {
         if (!s.nsNaming) {
             overlay.Hide();
-            return;
+            return true;
         }
         CancelNaming(s);
         RenderNow(s);
-        return;
+        return true;
     }
 
     if (wp == VK_RETURN) {
@@ -1750,12 +1749,13 @@ static void OnKeyDown(Overlay& overlay, Overlay::State& s, WPARAM wp) {
         } else {
             ActivateSelected(s, overlay.Hwnd());
         }
-        return;
+        return true;
     }
 
-    bool dirty = ctrl ? HandleCtrlKey(s, overlay.Hwnd(), wp, shift)
+    bool dirty = ctrl ? HandleCtrlKey(s, overlay.Hwnd(), wp, alt, shift)
                       : HandlePlainKey(s, overlay.Hwnd(), wp, shift);
     if (dirty) RenderNow(s);
+    return dirty;
 }
 
 static void OnChar(Overlay::State& s, HWND hwnd, WPARAM wp) {
@@ -2013,6 +2013,10 @@ LRESULT Overlay::WndProc(UINT msg, WPARAM wp, LPARAM lp) {
         case WM_KEYDOWN:
             if (s.visible) OnKeyDown(*this, s, wp);
             return 0;
+
+        case WM_SYSKEYDOWN:
+            if (s.visible && OnKeyDown(*this, s, wp)) return 0;
+            break;
 
         case WM_LBUTTONDOWN:
             if (s.visible) OnLButtonDown(*this, s, GET_X_LPARAM(lp), GET_Y_LPARAM(lp));

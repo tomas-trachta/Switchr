@@ -24,14 +24,11 @@ std::unordered_map<HWND, int>  g_assign;
 HWINEVENTHOOK                  g_showHook    = nullptr;
 HWINEVENTHOOK                  g_destroyHook = nullptr;
 
-// Plain Ctrl+arrows by user preference — while the mode is enabled this
-// shadows Ctrl+arrow word-jumps in every app. Registration failure degrades
-// silently; switching via the overlay still works.
 void RegisterCycleHotkeys() {
     if (!g_owner || g_hotkeysSuspended) return;
 
-    RegisterHotKey(g_owner, Ns::kHotkeyPrev, MOD_CONTROL | MOD_NOREPEAT, VK_LEFT);
-    RegisterHotKey(g_owner, Ns::kHotkeyNext, MOD_CONTROL | MOD_NOREPEAT, VK_RIGHT);
+    RegisterHotKey(g_owner, Ns::kHotkeyPrev, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_LEFT);
+    RegisterHotKey(g_owner, Ns::kHotkeyNext, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_RIGHT);
 }
 
 void UnregisterCycleHotkeys() {
