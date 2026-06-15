@@ -110,7 +110,7 @@ void ApplyVisibility(const std::vector<HWND>& show, const std::vector<HWND>& hid
     for (HWND h : hide) setNoTransitions(h, &on);
 
     constexpr UINT kCommon = SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                             SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+                             SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_ASYNCWINDOWPOS;
     HDWP hdwp = BeginDeferWindowPos((int)(show.size() + hide.size()));
     for (HWND h : show) { if (hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, 0, 0, 0, 0, kCommon | SWP_SHOWWINDOW); }
     for (HWND h : hide) { if (hdwp) hdwp = DeferWindowPos(hdwp, h, nullptr, 0, 0, 0, 0, kCommon | SWP_HIDEWINDOW); }
@@ -118,8 +118,8 @@ void ApplyVisibility(const std::vector<HWND>& show, const std::vector<HWND>& hid
     if (hdwp) {
         EndDeferWindowPos(hdwp);
     } else {
-        for (HWND h : show) ShowWindow(h, SW_SHOWNA);
-        for (HWND h : hide) ShowWindow(h, SW_HIDE);
+        for (HWND h : show) ShowWindowAsync(h, SW_SHOWNA);
+        for (HWND h : hide) ShowWindowAsync(h, SW_HIDE);
     }
 
     for (HWND h : show) setNoTransitions(h, &off);

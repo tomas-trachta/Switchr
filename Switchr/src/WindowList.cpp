@@ -102,12 +102,17 @@ std::wstring GetWindowExePath(HWND hwnd) {
 }
 
 void ForceForeground(HWND target) {
+    if (IsHungAppWindow(target)) {
+        if (IsIconic(target)) ShowWindowAsync(target, SW_RESTORE);
+        return;
+    }
+
     DWORD curThread = GetCurrentThreadId();
     HWND  fgWnd     = GetForegroundWindow();
     DWORD fgThread  = fgWnd ? GetWindowThreadProcessId(fgWnd, nullptr) : 0;
 
     bool attached = false;
-    if (fgThread && fgThread != curThread) {
+    if (fgThread && fgThread != curThread && !IsHungAppWindow(fgWnd)) {
         attached = AttachThreadInput(curThread, fgThread, TRUE) != 0;
     }
 
