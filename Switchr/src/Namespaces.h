@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include <string>
+#include <vector>
 
 // Groups top-level windows into named workspaces. Only the active namespace's
 // windows stay visible (and on the taskbar); the rest are hidden until their
@@ -34,6 +35,12 @@ int                 Count();
 int                 Active();
 const std::wstring& Name(int idx);
 int                 WindowCount(int idx);
+
+// Valid HWNDs assigned to namespace `idx`, in no particular order. This — not
+// live OS visibility — is the source of truth for which windows belong to a
+// namespace: show/hide is applied asynchronously, so IsWindowVisible lags a
+// switch by a few frames and must not be used to derive a namespace's set.
+std::vector<HWND>   WindowsOf(int idx);
 
 int  Create(const std::wstring& name);
 bool Rename(int idx, const std::wstring& name);

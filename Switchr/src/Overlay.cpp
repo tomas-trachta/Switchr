@@ -956,14 +956,16 @@ static void LayoutNsBar(Overlay::State& s, Renderer& r) {
 }
 
 static void RefreshWindows(Overlay::State& s, HWND hwnd) {
-    s.all = EnumerateAltTabWindows(hwnd);
-
-    // Safety net: a visible-but-untracked window belongs to the active
-    // namespace (the show hook can miss windows that gain a title late).
     if (Ns::Enabled()) {
-        for (const auto& w : s.all) {
+        // Safety net: a visible-but-untracked window belongs to the active
+        // namespace (the show hook can miss windows that gain a title late).
+        for (const auto& w : EnumerateAltTabWindows(hwnd)) {
             if (Ns::Of(w.hwnd) < 0) Ns::Assign(w.hwnd, Ns::Active());
         }
+
+        s.all = DescribeWindows(Ns::WindowsOf(Ns::Active()));
+    } else {
+        s.all = EnumerateAltTabWindows(hwnd);
     }
 
     std::sort(s.all.begin(), s.all.end(),

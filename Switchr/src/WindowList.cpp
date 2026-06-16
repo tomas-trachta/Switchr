@@ -84,6 +84,20 @@ std::vector<WindowEntry> EnumerateAltTabWindows(HWND exclude) {
     return out;
 }
 
+std::vector<WindowEntry> DescribeWindows(const std::vector<HWND>& hwnds) {
+    std::vector<WindowEntry> out;
+    out.reserve(hwnds.size());
+
+    for (HWND hwnd : hwnds) {
+        if (!IsWindow(hwnd)) continue;
+
+        ExeInfo exe = GetProcessExe(hwnd);
+        out.push_back(WindowEntry{
+            hwnd, WindowTitle(hwnd), std::move(exe.base), std::move(exe.path) });
+    }
+    return out;
+}
+
 std::wstring GetWindowExePath(HWND hwnd) {
     DWORD pid = 0;
     GetWindowThreadProcessId(hwnd, &pid);

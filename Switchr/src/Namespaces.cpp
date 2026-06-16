@@ -491,6 +491,14 @@ int Ns::WindowCount(int idx) {
     return n;
 }
 
+std::vector<HWND> Ns::WindowsOf(int idx) {
+    std::vector<HWND> out;
+    for (auto& [hwnd, ns] : g_assign) {
+        if (ns == idx && IsWindow(hwnd)) out.push_back(hwnd);
+    }
+    return out;
+}
+
 int Ns::Create(const std::wstring& name) {
     g_names.push_back(name);
     return (int)g_names.size() - 1;
