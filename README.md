@@ -26,14 +26,16 @@ Alt-Tab is fine until you have thirty windows. Switchr keeps the good part
 - **Real rendering.** DirectComposition + Direct2D with live DWM
   thumbnails, server-side fade animation, and per-monitor-V2 DPI
   awareness. The overlay opens on the monitor of the foreground window.
-- **No installer, no admin.** One exe, runs `asInvoker`, single-instance.
-  Exit from the tray and everything is restored.
+- **No admin required.** One exe, runs `asInvoker`, single-instance. Exit
+  from the tray and everything is restored. The installer is optional and
+  per-user — Switchr also runs fine dropped anywhere and double-clicked.
 
 ---
 
 ## Quick start
 
-1. Build (or grab) `Switchr.exe` and run it. An icon appears in the tray.
+1. Run the installer, or just grab `Switchr.exe` and run it directly — no
+   install is required. An icon appears in the tray.
 2. Press **Alt + the key above Tab** (`` ` `` on a US layout, `;` on
    Czech — the physical key, whatever it types) to summon the overlay.
 3. Arrows / `Tab` to pick a window, `Enter` or click to activate it,
@@ -150,8 +152,23 @@ $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere
 & $msbuild .\Switchr.sln -p:Configuration=Release -p:Platform=x64
 ```
 
-The binary lands at `build\x64\Release\Switchr.exe`. No runtime payload,
-no installer — the exe is the product.
+The binary lands at `build\x64\Release\Switchr.exe`. No runtime payload
+needed to run it — the exe is the product.
+
+### Building the installer
+
+An optional per-user installer (Start Menu / desktop shortcuts, "launch at
+startup" task) is built with [Inno Setup 6](https://jrsoftware.org/isdl.php):
+
+```powershell
+installer\build.ps1
+```
+
+This builds `Release|x64` via MSBuild, stages `Switchr.exe` plus the VC++
+runtime DLLs into `installer\stage\`, and compiles
+`installer\output\Switchr-setup-x64.exe` with ISCC. It requires no admin
+rights to build or to run — installs go under
+`%LOCALAPPDATA%\Programs\Switchr`.
 
 ---
 

@@ -1,0 +1,53 @@
+// Application icon. The lowest-numbered ICON resource in an EXE is what
+// Explorer, the taskbar, and Alt-Tab pick up, so this stays as id 1.
+1 ICON "..\\installer\\Switchr.ico"
+
+// Standard Windows VERSIONINFO block — surfaces in Explorer's file-
+// properties dialog ("Details" tab) and to any tool that reads
+// GetFileVersionInfoW. The numeric tuple and string both come from the
+// SWITCHR_VERSION_MAJOR / MINOR / PATCH preprocessor defines, which
+// Switchr.vcxproj derives from its single SwitchrVersion property. Bumping
+// the version in the vcxproj flows through here automatically.
+//
+// The stringification dance below turns the three numeric defines into
+// a single "M.m.p" string literal. We can't pass the string directly
+// via /D because MSBuild double-escapes the quotes; passing bare
+// digits and stringifying here avoids that entirely.
+#include <winver.h>
+
+#define SWITCHR_VSTR_(x) #x
+#define SWITCHR_VSTR(x)  SWITCHR_VSTR_(x)
+#define SWITCHR_VERSION_STR \
+    SWITCHR_VSTR(SWITCHR_VERSION_MAJOR) "." \
+    SWITCHR_VSTR(SWITCHR_VERSION_MINOR) "." \
+    SWITCHR_VSTR(SWITCHR_VERSION_PATCH)
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION    SWITCHR_VERSION_MAJOR,SWITCHR_VERSION_MINOR,SWITCHR_VERSION_PATCH,0
+PRODUCTVERSION SWITCHR_VERSION_MAJOR,SWITCHR_VERSION_MINOR,SWITCHR_VERSION_PATCH,0
+FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+FILEFLAGS      0x0L
+FILEOS         VOS__WINDOWS32
+FILETYPE       VFT_APP
+FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        // 040904b0 = lang 0x0409 (en-US), charset 0x04b0 (Unicode).
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName",      "Tomas Trachta"
+            VALUE "FileDescription",  "Keyboard-driven window switcher"
+            VALUE "FileVersion",      SWITCHR_VERSION_STR
+            VALUE "InternalName",     "Switchr"
+            VALUE "LegalCopyright",   "MIT License (c) 2026 Tomas Trachta"
+            VALUE "OriginalFilename", "Switchr.exe"
+            VALUE "ProductName",      "Switchr"
+            VALUE "ProductVersion",   SWITCHR_VERSION_STR
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04b0
+    END
+END

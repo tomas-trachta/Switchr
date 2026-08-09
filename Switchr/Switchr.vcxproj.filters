@@ -56,4 +56,9 @@
   <ItemGroup>
     <Manifest Include="app.manifest" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\Switchr.rc">
+      <Filter>Source Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
 </Project>

@@ -17,6 +17,16 @@
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
+  <!-- Single source of truth for the Switchr version. installer/build.ps1
+       reads SwitchrVersion from this file; the C++ and RC compilers receive
+       it as preprocessor defines (see ItemDefinitionGroup blocks below).
+       Bumping the version means editing only the three lines below. -->
+  <PropertyGroup Label="Version">
+    <SwitchrVersionMajor>1</SwitchrVersionMajor>
+    <SwitchrVersionMinor>0</SwitchrVersionMinor>
+    <SwitchrVersionPatch>0</SwitchrVersionPatch>
+    <SwitchrVersion>$(SwitchrVersionMajor).$(SwitchrVersionMinor).$(SwitchrVersionPatch)</SwitchrVersion>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -112,6 +122,18 @@
   <ItemGroup>
     <Manifest Include="app.manifest" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\Switchr.rc" />
+  </ItemGroup>
+  <!-- Version macros for src\Switchr.rc. Defined once (not per-config)
+       because the version doesn't vary between Debug / Release builds.
+       Switchr.rc stringifies the three numeric defines into a "M.m.p"
+       literal for the StringFileInfo block. -->
+  <ItemDefinitionGroup>
+    <ResourceCompile>
+      <PreprocessorDefinitions>SWITCHR_VERSION_MAJOR=$(SwitchrVersionMajor);SWITCHR_VERSION_MINOR=$(SwitchrVersionMinor);SWITCHR_VERSION_PATCH=$(SwitchrVersionPatch);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>
