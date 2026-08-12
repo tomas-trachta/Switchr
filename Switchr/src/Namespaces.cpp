@@ -135,7 +135,11 @@ void ApplyVisibility(const std::vector<HWND>& show, const std::vector<HWND>& hid
     }
 }
 
-void ReapplyVisibility() {
+// focusTarget, if given, is shown synchronously and pulled out of the async
+// batch so the caller can safely SetForegroundWindow it right afterwards;
+// SWP_ASYNCWINDOWPOS on the rest means their SW_SHOWNA can still be pending
+// when ReapplyVisibility returns.
+void ReapplyVisibility(HWND focusTarget = nullptr) {
     if (!g_enabled) return;
 
     std::vector<HWND> show, hide;
@@ -146,6 +150,14 @@ void ReapplyVisibility() {
         if (it->second == g_active) { if (!visible) show.push_back(it->first); }
         else                        { if (visible)  hide.push_back(it->first); }
         ++it;
+    }
+
+    if (focusTarget && !IsHungAppWindow(focusTarget)) {
+        auto it = std::find(show.begin(), show.end(), focusTarget);
+        if (it != show.end()) {
+            ShowWindow(focusTarget, SW_SHOWNA);
+            show.erase(it);
+        }
     }
 
     ApplyVisibility(show, hide);
@@ -543,23 +555,36 @@ void Ns::SwitchTo(int idx) {
     ReapplyVisibility();
 }
 
+// Highest-MRU-rank window assigned to namespace idx, skipping hung windows
+// since ForceForeground can't safely raise those without risking a block.
+HWND MruTopOf(int idx) {
+    HWND     best     = nullptr;
+    uint64_t bestRank = 0;
+
+    for (const auto& [hwnd, ns] : g_assign) {
+        if (ns != idx || !IsWindow(hwnd) || IsHungAppWindow(hwnd)) continue;
+
+        uint64_t r = Mru::Rank(hwnd);
+        if (!best || r > bestRank) { best = hwnd; bestRank = r; }
+    }
+
+    return best;
+}
+
 bool Ns::CycleActive(int dir) {
     if (!g_enabled) return false;
 
     int count = (int)g_names.size();
     if (count <= 1) return false;
 
-    SwitchTo((g_active + dir + count) % count);
+    int  target = (g_active + dir + count) % count;
+    HWND best   = MruTopOf(target);
+
+    g_active = target;
+    ReapplyVisibility(best);
 
     // Focus the new namespace's MRU-top window; without this, keystrokes keep
     // going to the window that was just hidden.
-    HWND best = nullptr;
-    uint64_t bestRank = 0;
-    for (const auto& [hwnd, ns] : g_assign) {
-        if (ns != g_active || !IsWindow(hwnd)) continue;
-        uint64_t r = Mru::Rank(hwnd);
-        if (!best || r > bestRank) { best = hwnd; bestRank = r; }
-    }
     if (best) ForceForeground(best);
 
     return true;
