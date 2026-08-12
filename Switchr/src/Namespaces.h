@@ -22,6 +22,11 @@ constexpr UINT kHotkeyNext = 0x4F8C;
 void Init(HWND hotkeyOwner);
 void Shutdown();   // un-hides every managed window and removes hooks
 
+// Un-hides every managed window without touching hooks, hotkeys, or saved
+// state. Safe to call from a crash handler on the thread that owns Ns state:
+// does only what's needed to give the user their windows back.
+void EmergencyRestore();
+
 bool Enabled();
 void Enable();     // first call of a session restores the saved structure
 void Disable();    // un-hides every managed window; assignments survive

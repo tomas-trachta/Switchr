@@ -5,6 +5,7 @@
 #include "MruTracker.h"
 #include "Namespaces.h"
 #include "NsOsd.h"
+#include "CrashHandler.h"
 
 #include <windows.h>
 #include <objbase.h>
@@ -137,6 +138,8 @@ int RunMessageLoop() {
 } // namespace
 
 int APIENTRY wWinMain(HINSTANCE hInst, HINSTANCE, LPWSTR, int) {
+    CrashHandler::Install();
+
     HANDLE mutex = CreateMutexW(nullptr, TRUE, L"Switchr.SingleInstance.{A1B2C3D4}");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         if (mutex) CloseHandle(mutex);

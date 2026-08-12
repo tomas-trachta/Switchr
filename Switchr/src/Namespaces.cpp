@@ -427,6 +427,10 @@ void Ns::Init(HWND hotkeyOwner) {
         WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
 }
 
+void Ns::EmergencyRestore() {
+    ShowAllManaged();
+}
+
 void Ns::Shutdown() {
     ShowAllManaged();
     RestoreTransitions();
