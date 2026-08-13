@@ -60,8 +60,43 @@ D2D1_COLOR_F Premul(float r, float g, float b, float a) {
     return D2D1::ColorF(r * a, g * a, b * a, a);
 }
 
+// DWMWA_SYSTEMBACKDROP_TYPE / DWMSBT_TRANSIENTWINDOW are Windows 11 22H2+
+// (SDK 10.0.22000+); defined by value so this builds against older SDKs too.
+// DwmSetWindowAttribute simply fails (ignored) on older Windows, leaving the
+// flat D2D backdrop fill as the only background — a no-op degrade.
+void EnableAcrylicBackdrop(HWND hwnd) {
+    constexpr DWORD kDwmwaSystemBackdropType   = 38;
+    constexpr int   kDwmsbtTransientWindow     = 3;
+
+    int backdrop = kDwmsbtTransientWindow;
+    DwmSetWindowAttribute(hwnd, (DWMWINDOWATTRIBUTE)kDwmwaSystemBackdropType,
+                          &backdrop, sizeof(backdrop));
+}
+
 bool IsPrintableChar(wchar_t c) {
     return c >= 0x20 && c != 0x7F;
+}
+
+// Cheap soft shadow: a handful of expanding, fading rounded rects drawn
+// behind the shape. Reuses one brush (mutated per layer) instead of a real
+// blur effect, so it stays fast enough to draw behind every visible tile.
+void DrawSoftShadow(ID2D1DeviceContext* ctx, ID2D1SolidColorBrush* brush,
+                     const D2D1_RECT_F& rect, float corner, float scale,
+                     float baseAlpha, float tintR, float tintG, float tintB,
+                     float dropY = 3.f) {
+    constexpr int kLayers = 4;
+    float dy = dropY * scale;
+
+    for (int layer = kLayers; layer >= 1; --layer) {
+        float spread = layer * 4.f * scale;
+        float layerAlpha = baseAlpha / (float)(layer * layer);
+
+        D2D1_RECT_F r{ rect.left - spread, rect.top - spread * 0.5f + dy,
+                       rect.right + spread, rect.bottom + spread + dy };
+        D2D1_ROUNDED_RECT rr{ r, corner + spread * 0.5f, corner + spread * 0.5f };
+        brush->SetColor(Premul(tintR, tintG, tintB, layerAlpha));
+        ctx->FillRoundedRectangle(rr, brush);
+    }
 }
 
 bool PointIn(const D2D1_RECT_F& r, float x, float y) {
@@ -247,6 +282,8 @@ struct Overlay::State {
     ComPtr<ID2D1SolidColorBrush>   bScrollTrack;
     ComPtr<ID2D1SolidColorBrush>   bScrollThumb;
     ComPtr<ID2D1SolidColorBrush>   bScrollThumbHover;
+    ComPtr<ID2D1SolidColorBrush>   bShadow;      // color mutated per draw; see DrawSoftShadow
+    ComPtr<ID2D1SolidColorBrush>   bHoverBorder;
     bool                           brushesValid = false;
 
     ComPtr<IDWriteTextFormat>      fmtSearch;
@@ -306,6 +343,7 @@ std::unique_ptr<Overlay> Overlay::Create(HINSTANCE hInst) {
         overlay.get());
     if (!hwnd) throw std::runtime_error("CreateWindowExW failed");
     overlay->hwnd_ = hwnd;
+    EnableAcrylicBackdrop(hwnd);
 
     overlay->s_->dpi   = GetDpiForWindow(hwnd);
     overlay->s_->scale = overlay->s_->dpi / 96.0f;
@@ -690,6 +728,8 @@ static void EnsureBrushes(Overlay::State& s, Renderer& r) {
     mk(s.bScrollTrack,      Premul(0.30f, 0.32f, 0.38f, 0.28f));
     mk(s.bScrollThumb,      Premul(0.72f, 0.76f, 0.84f, 0.60f));
     mk(s.bScrollThumbHover, Premul(0.88f, 0.91f, 0.97f, 0.85f));
+    mk(s.bShadow,       Premul(0.0f, 0.0f, 0.0f, 1.0f));
+    mk(s.bHoverBorder,  Premul(0.72f, 0.76f, 0.86f, 0.55f));
 
     s.brushesValid = true;
 }
@@ -1151,6 +1191,9 @@ static void RenderSearchBox(Overlay::State& s, Renderer& r) {
     float w = s.searchRect.right - x;
     float h = s.searchRect.bottom - y;
 
+    DrawSoftShadow(ctx, s.bShadow.Get(), s.searchRect, kSearchCorner * scale, scale, 0.40f,
+                   0.f, 0.f, 0.f);
+
     D2D1_ROUNDED_RECT rr{ s.searchRect, kSearchCorner * scale, kSearchCorner * scale };
     ctx->FillRoundedRectangle(rr, s.bSearch.Get());
     ctx->DrawRoundedRectangle(rr, s.bSearchBorder.Get(), 1.0f * scale);
@@ -1269,12 +1312,22 @@ static void RenderTile(Overlay::State& s, Renderer& r, int i) {
 
     bool sel   = (i == s.selected);
     bool hover = (i == s.hovered);
+
+    if (sel) {
+        DrawSoftShadow(ctx, s.bShadow.Get(), tr.outer, kTileCorner * s.scale, s.scale,
+                       0.55f, 0.46f, 0.70f, 1.00f, 0.f);  // accent-tinted glow
+    } else {
+        DrawSoftShadow(ctx, s.bShadow.Get(), tr.outer, kTileCorner * s.scale, s.scale,
+                       0.28f, 0.f, 0.f, 0.f);
+    }
+
     D2D1_ROUNDED_RECT rr{ tr.outer, kTileCorner * s.scale, kTileCorner * s.scale };
     ID2D1Brush* fill = sel   ? s.bTileSel.Get()
                      : hover ? s.bTileHover.Get()
                              : s.bTile.Get();
     ctx->FillRoundedRectangle(rr, fill);
-    if (sel) ctx->DrawRoundedRectangle(rr, s.bAccent.Get(), 3.0f * s.scale);
+    if (sel)        ctx->DrawRoundedRectangle(rr, s.bAccent.Get(), 3.0f * s.scale);
+    else if (hover) ctx->DrawRoundedRectangle(rr, s.bHoverBorder.Get(), 1.0f * s.scale);
 
     const auto& w = s.all[s.filtered[i]];
     std::wstring title = w.title.empty() ? w.exe : w.title;
