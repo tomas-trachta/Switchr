@@ -9,6 +9,8 @@ GPU-rendered overlay on a hotkey.
 > [Building from source](#building-from-source)). Behavior may change at any
 > time.
 
+![Switchr overlay](docs/switchr.png)
+
 ---
 
 ## Why Switchr
