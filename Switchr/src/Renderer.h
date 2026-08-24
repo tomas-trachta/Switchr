@@ -27,6 +27,15 @@ public:
     void SetOpacity(float v);
     void AnimateOpacity(float from, float to, double seconds);  // server-side (DComp)
 
+    // Grabs whatever is currently on screen at (monitorX, monitorY, width_,
+    // height_) and builds a Gaussian-blurred D2D effect from it — a real,
+    // per-pixel blur of the desktop behind the overlay rather than relying on
+    // DWM's fixed-strength Mica/Acrylic backdrop. Call while the overlay
+    // window is still hidden, before showing it. No-ops DrawBlurredBackdrop
+    // if the capture fails.
+    void CaptureBlurredBackdrop(int monitorX, int monitorY, float stdDeviation);
+    void DrawBlurredBackdrop();
+
     // Cached D2D bitmap of the file's shell icon; nullptr if extraction
     // failed. Owned by Renderer.
     ID2D1Bitmap* GetExeIcon(const std::wstring& exePath);
@@ -69,4 +78,7 @@ private:
     ComPtr<IDWriteFactory>        dwrite_;
     ComPtr<IWICImagingFactory>    wic_;
     std::unordered_map<std::wstring, ComPtr<ID2D1Bitmap>> iconCache_;
+
+    ComPtr<ID2D1Bitmap>           backdropBitmap_;  // raw screen capture
+    ComPtr<ID2D1Effect>           backdropBlur_;    // Gaussian blur fed from backdropBitmap_
 };

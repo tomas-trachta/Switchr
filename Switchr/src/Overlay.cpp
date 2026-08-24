@@ -26,14 +26,15 @@ constexpr float kTileW          = 280.f;   // reference width for the thumb aspe
 constexpr float kTileThumbH     = 158.f;
 constexpr float kTileTitleH     = 56.f;
 constexpr float kTileGap        = 20.f;
-constexpr float kTileCorner     = 12.f;
+constexpr float kTileCorner     = 18.f;
 constexpr float kPreferredTileW = 440.f;
 constexpr float kMaxTileW       = 600.f;
 constexpr float kSearchW        = 760.f;
 constexpr float kSearchH        = 56.f;
-constexpr float kSearchCorner   = 14.f;
-constexpr float kSearchPadX     = 22.f;
+constexpr float kSearchCorner   = kSearchH * 0.5f;   // full capsule — Spotlight-style pill
+constexpr float kSearchPadX     = 24.f;
 constexpr float kListRowH       = 60.f;
+constexpr float kListRowCorner  = 16.f;
 constexpr float kListW          = 760.f;
 constexpr int   kMaxTileCols    = 8;
 constexpr int   kMaxListRows    = 10;
@@ -46,6 +47,7 @@ constexpr float kScrollbarMarginX  = 10.f;
 constexpr float kScrollbarMinThumb = 40.f;
 constexpr float kScrollbarCorner   = 4.f;
 constexpr double kFadeInSec     = 0.05;
+constexpr float  kBackdropBlurStdDev = 12.f;  // Gaussian std deviation, in device pixels at 96 DPI
 constexpr UINT  kCaretTimerId   = 0x517A;
 constexpr UINT  kCaretBlinkMs   = 530;
 constexpr float kNsBarH         = 38.f;
@@ -266,24 +268,24 @@ struct Overlay::State {
     float scrollY     = 0.f;
     float maxScroll   = 0.f;
 
-    ComPtr<ID2D1SolidColorBrush>   bBackdrop;
     ComPtr<ID2D1SolidColorBrush>   bTile;
     ComPtr<ID2D1SolidColorBrush>   bTileSel;
     ComPtr<ID2D1SolidColorBrush>   bAccent;
     ComPtr<ID2D1SolidColorBrush>   bText;
     ComPtr<ID2D1SolidColorBrush>   bTextDim;
-    ComPtr<ID2D1SolidColorBrush>   bSearch;
-    ComPtr<ID2D1SolidColorBrush>   bSearchBorder;
+    ComPtr<ID2D1SolidColorBrush>   bButton;       // flat pill — search bar + ns bar buttons
+    ComPtr<ID2D1SolidColorBrush>   bButtonHover;
+    ComPtr<ID2D1SolidColorBrush>   bButtonBorder; // silvery rim for the metallic look
     ComPtr<ID2D1SolidColorBrush>   bCaret;
     ComPtr<ID2D1SolidColorBrush>   bListSel;
     ComPtr<ID2D1SolidColorBrush>   bTileHover;
-    ComPtr<ID2D1SolidColorBrush>   bListHover;
     ComPtr<ID2D1SolidColorBrush>   bSelection;
     ComPtr<ID2D1SolidColorBrush>   bScrollTrack;
     ComPtr<ID2D1SolidColorBrush>   bScrollThumb;
     ComPtr<ID2D1SolidColorBrush>   bScrollThumbHover;
     ComPtr<ID2D1SolidColorBrush>   bShadow;      // color mutated per draw; see DrawSoftShadow
     ComPtr<ID2D1SolidColorBrush>   bHoverBorder;
+    ComPtr<ID2D1SolidColorBrush>   bStateHover;
     bool                           brushesValid = false;
 
     ComPtr<IDWriteTextFormat>      fmtSearch;
@@ -667,6 +669,11 @@ void Overlay::Show() {
     s.scale    = s.dpi / 96.0f;
 
     s.renderer->Resize(s.monitorW, s.monitorH);
+
+    // Grab the real desktop pixels and blur them while the window is still
+    // hidden, so the capture can't pick up our own (about-to-show) overlay.
+    s.renderer->CaptureBlurredBackdrop(mon.left, mon.top, kBackdropBlurStdDev * s.scale);
+
     s.renderer->SetOpacity(0.f);  // SWP_SHOWWINDOW must not flash the previous frame
     SetWindowPos(hwnd_, HWND_TOPMOST, mon.left, mon.top, s.monitorW, s.monitorH,
         SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -712,19 +719,23 @@ static void EnsureBrushes(Overlay::State& s, Renderer& r) {
         ctx->CreateSolidColorBrush(c, &b);
     };
 
-    mk(s.bBackdrop,     Premul(0.03f, 0.04f, 0.07f, 0.84f));
     mk(s.bTile,         Premul(0.13f, 0.14f, 0.18f, 0.94f));
     mk(s.bTileHover,    Premul(0.19f, 0.21f, 0.27f, 0.96f));
     mk(s.bTileSel,      Premul(0.20f, 0.27f, 0.42f, 0.98f));
     mk(s.bAccent,       Premul(0.46f, 0.70f, 1.00f, 1.0f));
     mk(s.bText,         Premul(0.94f, 0.95f, 0.97f, 1.0f));
     mk(s.bTextDim,      Premul(0.74f, 0.76f, 0.82f, 1.0f));
-    mk(s.bSearch,       Premul(0.09f, 0.10f, 0.13f, 0.96f));
-    mk(s.bSearchBorder, Premul(0.34f, 0.38f, 0.48f, 0.85f));
+    // Lighter graphite pill with a thin silver rim — a metallic read instead
+    // of a flat matte-black chip.
+    mk(s.bButton,       Premul(0.24f, 0.24f, 0.26f, 1.0f));
+    mk(s.bButtonHover,  Premul(0.31f, 0.31f, 0.34f, 1.0f));
+    mk(s.bButtonBorder, Premul(0.78f, 0.79f, 0.82f, 0.55f));
     mk(s.bCaret,        Premul(0.94f, 0.95f, 0.97f, 1.0f));
     mk(s.bListSel,      Premul(0.22f, 0.34f, 0.58f, 0.92f));
-    mk(s.bListHover,    Premul(0.18f, 0.20f, 0.27f, 0.94f));
     mk(s.bSelection,    Premul(0.46f, 0.70f, 1.00f, 0.42f));
+    // Material-style tonal state layer: accent color washed at low opacity
+    // over a resting surface, instead of only swapping the flat fill.
+    mk(s.bStateHover,   Premul(0.46f, 0.70f, 1.00f, 0.08f));
     mk(s.bScrollTrack,      Premul(0.30f, 0.32f, 0.38f, 0.28f));
     mk(s.bScrollThumb,      Premul(0.72f, 0.76f, 0.84f, 0.60f));
     mk(s.bScrollThumbHover, Premul(0.88f, 0.91f, 0.97f, 0.85f));
@@ -1191,12 +1202,9 @@ static void RenderSearchBox(Overlay::State& s, Renderer& r) {
     float w = s.searchRect.right - x;
     float h = s.searchRect.bottom - y;
 
-    DrawSoftShadow(ctx, s.bShadow.Get(), s.searchRect, kSearchCorner * scale, scale, 0.40f,
-                   0.f, 0.f, 0.f);
-
     D2D1_ROUNDED_RECT rr{ s.searchRect, kSearchCorner * scale, kSearchCorner * scale };
-    ctx->FillRoundedRectangle(rr, s.bSearch.Get());
-    ctx->DrawRoundedRectangle(rr, s.bSearchBorder.Get(), 1.0f * scale);
+    ctx->FillRoundedRectangle(rr, s.bButton.Get());
+    ctx->DrawRoundedRectangle(rr, s.bButtonBorder.Get(), 1.0f * scale);
 
     float padX    = kSearchPadX * scale;
     float originX = x + padX;
@@ -1244,8 +1252,8 @@ static void RenderNsBar(Overlay::State& s, Renderer& r) {
 
         D2D1_ROUNDED_RECT rr{ rect, corner, corner };
         ctx->FillRoundedRectangle(rr,
-            active ? s.bTileSel.Get() : hover ? s.bTileHover.Get() : s.bTile.Get());
-        if (active) ctx->DrawRoundedRectangle(rr, s.bAccent.Get(), 2.f * s.scale);
+            active ? s.bTileSel.Get() : hover ? s.bButtonHover.Get() : s.bButton.Get());
+        ctx->DrawRoundedRectangle(rr, s.bButtonBorder.Get(), 1.0f * s.scale);
         DrawTextSimple(ctx, s.fmtTileTitle.Get(), NsPillLabel(i), rect,
                        (active || hover) ? s.bText.Get() : s.bTextDim.Get());
     }
@@ -1257,10 +1265,9 @@ static void RenderNsBar(Overlay::State& s, Renderer& r) {
         const auto& rect = s.nsBtnRects[i];
         bool hover = (i == s.nsBtnHovered);
 
-        D2D1_ROUNDED_RECT rr{ rect, 8.f * s.scale, 8.f * s.scale };
-        ctx->FillRoundedRectangle(rr, hover ? s.bTileHover.Get() : s.bTile.Get());
-        ctx->DrawRoundedRectangle(rr,
-            hover ? s.bAccent.Get() : s.bSearchBorder.Get(), 1.f * s.scale);
+        D2D1_ROUNDED_RECT rr{ rect, corner, corner };  // pill, matching the namespace tabs
+        ctx->FillRoundedRectangle(rr, hover ? s.bButtonHover.Get() : s.bButton.Get());
+        ctx->DrawRoundedRectangle(rr, s.bButtonBorder.Get(), 1.0f * s.scale);
         DrawTextSimple(ctx, s.fmtMuted.Get(), kNsBtnLabels[i], rect,
                        hover ? s.bText.Get() : s.bTextDim.Get());
     }
@@ -1315,17 +1322,21 @@ static void RenderTile(Overlay::State& s, Renderer& r, int i) {
 
     if (sel) {
         DrawSoftShadow(ctx, s.bShadow.Get(), tr.outer, kTileCorner * s.scale, s.scale,
-                       0.55f, 0.46f, 0.70f, 1.00f, 0.f);  // accent-tinted glow
+                       0.30f, 0.46f, 0.70f, 1.00f, 0.f);  // accent-tinted glow
+    } else if (hover) {
+        // Material-style elevation raise: hovered cards cast a deeper, more
+        // dropped shadow than resting ones instead of just swapping color.
+        DrawSoftShadow(ctx, s.bShadow.Get(), tr.outer, kTileCorner * s.scale, s.scale,
+                       0.20f, 0.f, 0.f, 0.f, 5.f);
     } else {
         DrawSoftShadow(ctx, s.bShadow.Get(), tr.outer, kTileCorner * s.scale, s.scale,
-                       0.28f, 0.f, 0.f, 0.f);
+                       0.12f, 0.f, 0.f, 0.f, 1.5f);
     }
 
     D2D1_ROUNDED_RECT rr{ tr.outer, kTileCorner * s.scale, kTileCorner * s.scale };
-    ID2D1Brush* fill = sel   ? s.bTileSel.Get()
-                     : hover ? s.bTileHover.Get()
-                             : s.bTile.Get();
+    ID2D1Brush* fill = sel ? s.bTileSel.Get() : s.bTile.Get();
     ctx->FillRoundedRectangle(rr, fill);
+    if (hover && !sel) ctx->FillRoundedRectangle(rr, s.bStateHover.Get());  // tonal state layer
     if (sel)        ctx->DrawRoundedRectangle(rr, s.bAccent.Get(), 3.0f * s.scale);
     else if (hover) ctx->DrawRoundedRectangle(rr, s.bHoverBorder.Get(), 1.0f * s.scale);
 
@@ -1403,11 +1414,19 @@ static void RenderListRow(Overlay::State& s, Renderer& r, int i) {
 
     bool sel   = (i == s.selected);
     bool hover = (i == s.hovered);
-    D2D1_ROUNDED_RECT rr{ rect, 8.f * s.scale, 8.f * s.scale };
-    ID2D1Brush* fill = sel   ? s.bListSel.Get()
-                     : hover ? s.bListHover.Get()
-                             : s.bTile.Get();
+    D2D1_ROUNDED_RECT rr{ rect, kListRowCorner * s.scale, kListRowCorner * s.scale };
+
+    if (sel) {
+        DrawSoftShadow(ctx, s.bShadow.Get(), rect, kListRowCorner * s.scale, s.scale,
+                       0.24f, 0.46f, 0.70f, 1.00f, 0.f);  // accent-tinted glow
+    } else if (hover) {
+        DrawSoftShadow(ctx, s.bShadow.Get(), rect, kListRowCorner * s.scale, s.scale,
+                       0.16f, 0.f, 0.f, 0.f, 3.f);        // raised on hover
+    }
+
+    ID2D1Brush* fill = sel ? s.bListSel.Get() : s.bTile.Get();
     ctx->FillRoundedRectangle(rr, fill);
+    if (hover && !sel) ctx->FillRoundedRectangle(rr, s.bStateHover.Get());  // tonal state layer
 
     if (sel) {
         ctx->DrawRoundedRectangle(rr, s.bAccent.Get(), 2.0f * s.scale);
@@ -1461,9 +1480,7 @@ static void Render(Overlay::State& s, Renderer& r) {
     r.BeginDraw();
     auto* ctx = r.Ctx();
     ctx->Clear(D2D1::ColorF(0, 0, 0, 0));
-    ctx->FillRectangle(
-        D2D1::RectF(0.f, 0.f, (float)s.monitorW, (float)s.monitorH),
-        s.bBackdrop.Get());
+    r.DrawBlurredBackdrop();  // real Gaussian blur of the captured desktop; no-op if capture failed
 
     RenderSearchBox(s, r);
     RenderNsBar(s, r);

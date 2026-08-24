@@ -1,3 +1,9 @@
+// d2d1_1.h (pulled in by Renderer.h) includes d2d1effects.h itself, which
+// would otherwise trip its include guard before INITGUID takes effect and
+// leave the built-in effect CLSIDs as unresolved extern declarations.
+#include <initguid.h>
+#include <d2d1effects.h>
+
 #include "Renderer.h"
 
 #include <shellapi.h>
@@ -16,6 +22,35 @@ namespace {
 
 void ThrowIfFailed(HRESULT hr, const char* what) {
     if (FAILED(hr)) throw std::runtime_error(what);
+}
+
+// Grabs the given screen region into a top-down 32bpp DIB section. Returns
+// the pixel buffer pointer (owned by `dib`, valid until it is deleted) or
+// nullptr on failure.
+void* CaptureScreenDib(int x, int y, int w, int h, HBITMAP& dib, HDC& memDC) {
+    HDC screenDC = GetDC(nullptr);
+    if (!screenDC) return nullptr;
+
+    memDC = CreateCompatibleDC(screenDC);
+
+    BITMAPINFO bi{};
+    bi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bi.bmiHeader.biWidth       = w;
+    bi.bmiHeader.biHeight      = -h;  // negative = top-down, matches D2D's expected row order
+    bi.bmiHeader.biPlanes      = 1;
+    bi.bmiHeader.biBitCount    = 32;
+    bi.bmiHeader.biCompression = BI_RGB;
+
+    void* bits = nullptr;
+    dib = CreateDIBSection(memDC, &bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+    if (dib && bits) {
+        HGDIOBJ old = SelectObject(memDC, dib);
+        BitBlt(memDC, 0, 0, w, h, screenDC, x, y, SRCCOPY);
+        SelectObject(memDC, old);
+    }
+
+    ReleaseDC(nullptr, screenDC);
+    return bits;
 }
 
 } // namespace
@@ -242,4 +277,42 @@ ID2D1Bitmap* Renderer::GetExeIcon(const std::wstring& exePath) {
     auto& slot = iconCache_[key];
     slot = CreateIconBitmap(exePath);
     return slot.Get();
+}
+
+void Renderer::CaptureBlurredBackdrop(int monitorX, int monitorY, float stdDeviation) {
+    backdropBlur_.Reset();
+    backdropBitmap_.Reset();
+
+    HBITMAP dib = nullptr;
+    HDC memDC = nullptr;
+    void* bits = CaptureScreenDib(monitorX, monitorY, width_, height_, dib, memDC);
+
+    if (bits) {
+        D2D1_BITMAP_PROPERTIES bp = D2D1::BitmapProperties(
+            D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE));
+        UINT32 pitch = (UINT32)width_ * 4;
+
+        ComPtr<ID2D1Bitmap> bmp;
+        if (SUCCEEDED(d2dCtx_->CreateBitmap(
+                D2D1::SizeU((UINT32)width_, (UINT32)height_), bits, pitch, &bp, &bmp)) && bmp) {
+            backdropBitmap_ = bmp;
+
+            ComPtr<ID2D1Effect> blur;
+            if (SUCCEEDED(d2dCtx_->CreateEffect(CLSID_D2D1GaussianBlur, &blur)) && blur) {
+                blur->SetInput(0, backdropBitmap_.Get());
+                blur->SetValue(D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION, stdDeviation);
+                blur->SetValue(D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION, D2D1_GAUSSIANBLUR_OPTIMIZATION_SPEED);
+                blur->SetValue(D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_BORDER_MODE_HARD);
+                backdropBlur_ = blur;
+            }
+        }
+    }
+
+    if (dib) DeleteObject(dib);
+    if (memDC) DeleteDC(memDC);
+}
+
+void Renderer::DrawBlurredBackdrop() {
+    if (!backdropBlur_) return;
+    d2dCtx_->DrawImage(backdropBlur_.Get());
 }
