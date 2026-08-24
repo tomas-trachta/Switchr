@@ -24,7 +24,7 @@
   <PropertyGroup Label="Version">
     <SwitchrVersionMajor>1</SwitchrVersionMajor>
     <SwitchrVersionMinor>0</SwitchrVersionMinor>
-    <SwitchrVersionPatch>1</SwitchrVersionPatch>
+    <SwitchrVersionPatch>2</SwitchrVersionPatch>
     <SwitchrVersion>$(SwitchrVersionMajor).$(SwitchrVersionMinor).$(SwitchrVersionPatch)</SwitchrVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
